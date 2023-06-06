@@ -4,15 +4,17 @@ author: "Luke Todd"
 date: "2023-06-05"
 output: 
   html_document:
+    toc: true
+    toc-location: left
+    toc_float:
+      toc_collapsed: true
     code_folding: hide
+    theme: yeti
 ---
 
 ```{r setup, include=FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-# Loading Packages
-```{r}
 # should haves (from last week)
 library(tidyverse)
 library(here)
@@ -29,18 +31,24 @@ library(AICcmodavg)
 library(GGally)
 ```
 
-# Loading Data
+# Introduction
+Sarracenia are a group of carnivorous plants mainly found in North America, specifically in "wet savannas, seepage slopes, and bog environments" (Sexton). Their pitcher-shaped leaves allow them to capture and digest insects, allowing Sarracenia to uptake nutrients despite their often lacking ecosystems. Scientists are often very interested in them because of their ability to use their unique shape, design, and digestive enzymes to trap and digest insects, all without having any moving parts (Takeuchi). The health of Sarracenia are important because they contribute to the biodiversity of these nutrient-depleted ecosystems. Recently, studies following the "community assembly and structure [of these] carnivorous pitcher plants has increased dramatically" (Heil). By studying how biomass is affected by morphological, physiological, or taxonomic characteristics, we are able to measure the health of these Sarracenia and see what factors might contribute to a larger plant. Thus, we can see what characteristics are important when guiding conservation efforts, or when studying the health of ecosystems. In this study, we are addressing the question of, "what characteristics are most related to the total biomass of a Sarracenia?" I hypothesize that species, feedlevel, and num_lvs will be the most significant predictors of total biomass.
+
+# Methods
+### Loading Data
 ```{r}
 sar <- read.csv(here("Data/hf109-01-sarracenia.csv")) %>% 
   clean_names() %>% 
   select(totmass, species, feedlevel, sla, chlorophyll, amass, num_lvs, num_phylls)
 ```
 
-## 7a
+### Sampling Methods
+In this study, two plants of each Sarracenia species were selected, each with varying size. There were 120 plants total, and each other them were assigned to one of six feeding levels. Feeding would occur once a week for 7 weeks. (Ellison, Farnsworth).
 
-## 7b
+### Data Organization
+The collected data is implemented into a dataset, where each column was a variable, and each row was an observation about the variable.
 
-## 7c
+### Missing Data Visualization
 ```{r, fig.cap = "This figure displays the number of missing values for each variable in the sar data frame. Based on this figure, we can see that chlorophyll (Chlorophyll content), amass (Photosynthetic Rate), and sla (Specific Leaf Area) are missing the most values with 14, 14, and 10 missing values, respectively. Num_phylls and num_lvs are missing 2 values, and the rest are missing none."}
 gg_miss_var(sar)
 ```
@@ -51,7 +59,7 @@ sar_nona <- sar %>%
   drop_na(sla, chlorophyll, amass, num_lvs, num_phylls)
 ```
 
-## 7d
+### Pearson's Correlation Visualization
 ```{r, fig.cap = "This figure displays the Person's correlation values between different variables. High absolute values means that there is a greater correlation between the variables. For example, sla and amass have the greatest positive correlation between each other with a value of 0.32. On the otherhand, num_lvs and amass have the greatest negative correlation between each other with a value of -0.31."}
 
 # calc Pearson's r for numerical values
@@ -65,15 +73,16 @@ corrplot(sar_cor,
          addCoef.col = "black")
 ```
 
-## 7e
+### Variable Relationships
 ```{r, fig.width = 10, fig.height = 10}
 sar_nona %>% 
   select(species:num_phylls) %>% 
   ggpairs() 
 ```
 
-## 7f
+### Null and Full Models
 As we are trying to predict totmass, the y-value is set to totmass. For the null model, we set the x-value to 1, as this selects for just the intercept. For the full model, we select every variable that we are interested in.
+
 ```{r}
 null <- lm(totmass ~ 1, data = sar_nona)
 full <- lm(totmass ~ species + feedlevel + 
@@ -82,7 +91,7 @@ full <- lm(totmass ~ species + feedlevel +
            data = sar_nona)
 ```
 
-## 7g/h
+### Diagnostic Checks
 ```{r, fig.height = 6}
 # visual diagnostics for full model
 par(mfrow = c(2, 2))
@@ -94,7 +103,6 @@ check_normality(full)
 check_heteroscedasticity(full)
 ```
 
-
 Checking normality and homoscedasticity assumptions both gave p-values less than 0.001, indicating that our current full model is non-normal and heteroscedastic. Because of this, we will log-transform our model and retest the diagnostics.
 
 ```{r}
@@ -105,7 +113,6 @@ full_log <- lm(log(totmass) ~ species + feedlevel +
                  num_phylls, 
                data = sar_nona)
 ```
-
 
 ```{r, fig.height = 6}
 # visual diagnostic checks
@@ -122,7 +129,7 @@ check_heteroscedasticity(full_log)
 The statistical diagnostic checks for normality and homoscedasticity passed, so we will continue using the log-transformed model.
 
 
-# 7i
+### Model Construction
 ```{r, fig.height = 6}
 # using ANOVA tables to create new models, eliminating one non-significant variable at a time
 anova(full_log)
@@ -179,7 +186,7 @@ The statistical tests show that model4 appears to have heteroscedasticity, or no
 The type of model selection that I used above is called backward model selection. It begins at a full model and you slowly eliminate the least significant variable, until you are left with a model that passes all diagnostics, but has the least amount of predictor variables. Most of the time, it is better to have the least amount of predictor variables as possible since it increases the interpretability of your model. Based on the above method, "model3" appears to be our best model.
 
 
-## 7j
+### Variance Inflation Factor
 
 ```{r}
 # full model variance inflation factor check
@@ -187,7 +194,7 @@ car::vif(full_log)
 ```
 Based on the results, we can see that every variable has a GVIF value greater than 1, indicating that there is some multicollinearity. Ideally, you want to be as close as possible to 1.
 
-## 7k
+### Model Comparison
 ```{r}
 # comparing models using AIC
 MuMIn::AICc(full, full_log, null, model2, model3, model4)
@@ -195,9 +202,11 @@ MuMIn::AICc(full, full_log, null, model2, model3, model4)
 
 The above chart shows that model3 has the lowest AICc value. Therefore, we will choose model3 as the best model.
 
-## 8a
-The best model was model3, which used the variables species, feedlevel, sla, chlorophyll, and num_lvs to predict log(totmass). I chose this model by using backward model selection, starting from the full model, and slowly eliminating unnecessary, insignificant variables. Model3 was the smallest model that passed the model diagnostics, and it also had the lowest AICc.
+# Results
 
+### Model Selection
+The best model was model3, which used the variables species, feedlevel, sla, chlorophyll, and num_lvs to predict log(totmass). I chose this model by using backward model selection, starting from the full model, and slowly eliminating unnecessary, insignificant variables. Model3 was the smallest model that passed the model diagnostics, and it also had the lowest AICc.  
+  
 | Model    | Formula                                                                              | AICc     | Diagnostic P/NP |
 |----------|--------------------------------------------------------------------------------------|----------|-----------------|
 | full     | totmass ~ species + feedlevel + sla + chlorphyll + amass + num_lvs + num_phylls      | 497.3964 | NP              |
@@ -227,16 +236,38 @@ table <- tidy(model3, conf.int = TRUE, exponentiate = TRUE) %>%
 table
 ```
 
-## 8b
+### Model Interpretation
 Model3 essentially states that the variables species, feedlevel, sla, chlorophyll, and num_lvs are the best predictors of log(totmass). 
 
 
-## 8c
-```{r}
-model_pred <- ggpredict(model3, terms = "species", back.transform = TRUE)
+### Visualization of Model Predictions
+```{r, fig.cap = "This figure shows the model predictions for biomass as a function of the species predictor. Biomass is predicted to be highest when the species is leucophylla and lowest when the species are psittacina or rosea."}
+# model prediction of biomass as a function of species
 
+model_pred <- ggpredict(model3, terms = "species", back.transform = TRUE)
 plot(ggpredict(model3, terms = "species", back.transform = TRUE), add.data = TRUE)
 ```
+
+```{r, fig.cap = "This figure shows the model prediction of biomass as a function of chlorphyll. This predicts that as chlorophyll increases, biomass also increases."}
+# model prediction of biomass as a function of "chlorophyll"
+plot(ggpredict(model3, terms = "chlorophyll", back.transform = TRUE), add.data = TRUE)
+```
+
+### Discussion
+Biologically, the results of this model tell us that total biomass of a Sarracenia is dependent on what species of Sarracenia it is, how many grams of ground hymenoptera it is fed per week, how much specific leaf area it has, how much chlorophyll a+b content it has, and how many total number of pitchers and phyllodes it produces. In other words, it means that Sarracenia biomass is not predicted by a single measure, but rather by a lot of different variables.
+
+
+# Bibliography
+Ellison, A. and E. Farnsworth. 2021. Effects of Prey Availability on Sarracenia Physiology at Harvard Forest 2005 ver 18. Environmental Data Initiative. https://doi.org/10.6073/pasta/26b22d09279e62fd729ffc35f9ef0174 (Accessed 2023-06-06).
+
+Sexton, W. K. et al. “Characterization of Endophytic Bacterial Communities Within Greenhouse and Field-Grown Rhizomes of Three Rare Pitcher Plant Species (Sarracenia Oreophila, S. Leucophylla, and S. Purpurea Spp. Venosa) with an Emphasis on Nitrogen-Fixing Bacteria.” Plant and soil 447.1-2 (2020): 257–279. Web.
+
+Takeuchi, Yayoi et al. “Bacterial Diversity and Composition in the Fluid of Pitcher Plants of the Genus Nepenthes.” Systematic and applied microbiology 38.5 (2015): 330–339. Web.
+
+Heil, Jacob A. et al. “Sarracenia Pitcher Plant‐associated Microbial Communities Differ Primarily by Host Species Across a Longitudinal Gradient.” Environmental microbiology 24.8 (2022): 3500–3516. Web.
+
+### Link to Github
+https://github.com/lukegtodd/ENVS-193DS_homework-05/tree/master 
 
 
 
