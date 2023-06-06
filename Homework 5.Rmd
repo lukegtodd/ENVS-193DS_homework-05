@@ -5,18 +5,99 @@ date: "2023-06-05"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Loading Packages
 ```{r}
+# should haves (from last week)
+library(tidyverse)
 library(here)
+library(janitor)
+library(ggeffects)
+library(performance)
+library(naniar) # or equivalent
+library(flextable) # or equivalent
+library(car)
+library(broom)
+# would be nice to have
+library(corrplot)
+library(AICcmodavg)
+library(GGally)
 ```
 
-# Using here() to organize packages
+# Loading Data
 ```{r}
-data_path <- here("data")
-knit_path <- here("knit")
+sar <- read.csv(here("Data/hf109-01-sarracenia.csv")) %>% 
+  clean_names() %>% 
+  select(totmass, species, feedlevel, sla, chlorophyll, amass, num_lvs, num_phylls)
 ```
+
+## 7a
+
+## 7b
+
+## 7c
+```{r, fig.cap = "This figure displays the number of missing values for each variable in the sar data frame. Based on this figure, we can see that chlorophyll (Chlorophyll content), amass (Photosynthetic Rate), and sla (Specific Leaf Area) are missing the most values with 14, 14, and 10 missing values, respectively. Num_phylls and num_lvs are missing 2 values, and the rest are missing none."}
+gg_miss_var(sar)
+```
+
+```{r}
+# creating a dataset without the missing values
+sar_nona <- sar %>% 
+  drop_na(sla, chlorophyll, amass, num_lvs, num_phylls)
+```
+
+## 7d
+```{r, fig.cap = "This figure displays the Person's correlation values between different variables. High absolute values means that there is a greater correlation between the variables. For example, sla and amass have the greatest positive correlation between each other with a value of 0.32. On the otherhand, num_lvs and amass have the greatest negative correlation between each other with a value of -0.31."}
+
+# calc Pearson's r for numerical values
+sar_cor <- sar_nona %>% 
+  select(feedlevel:num_phylls) %>% 
+  cor(method = "pearson")
+
+# plot correlation values
+corrplot(sar_cor,
+         method = "ellipse",
+         addCoef.col = "black")
+```
+
+## 7e
+```{r, fig.width = 10, fig.height = 10}
+sar_nona %>% 
+  select(species:num_phylls) %>% 
+  ggpairs() 
+```
+
+## 7f
+As we are trying to predict totmass, the y-value is set to totmass. For the null model, we set the x-value to 1, as this selects for just the intercept. For the full model, we select every variable that we are interested in.
+```{r}
+null <- lm(totmass ~ 1, data = sar_nona)
+full <- lm(totmass ~ species + feedlevel + 
+             sla + chlorophyll + amass + 
+             num_lvs + num_phylls, 
+           data = sar_nona)
+```
+
+## 7g
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
