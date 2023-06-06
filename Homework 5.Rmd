@@ -188,15 +188,53 @@ Based on the results, we can see that every variable has a GVIF value greater th
 ## 7k
 ```{r}
 # comparing models using AIC
-MuMIn::AICc(full_log, null, model2, model3, model4)
+MuMIn::AICc(full, full_log, null, model2, model3, model4)
 ```
 
 The above chart shows that model3 has the lowest AICc value. Therefore, we will choose model3 as the best model.
 
 ## 8a
+The best model was model3, which used the variables species, feedlevel, sla, chlorophyll, and num_lvs to predict log(totmass). I chose this model by using backward model selection, starting from the full model, and slowly eliminating unnecessary, insignificant variables. Model3 was the smallest model that passed the model diagnostics, and it also had the lowest AICc.
+
+| Model    | Formula                                                                              | AICc     | Diagnostic P/NP |
+|----------|--------------------------------------------------------------------------------------|----------|-----------------|
+| full     | totmass ~ species + feedlevel + sla + chlorphyll + amass + num_lvs + num_phylls      | 497.3964 | NP              |
+| full_log | log(totmass) ~ species + feedlevel + sla + chlorphyll + amass + num_lvs + num_phylls | 133.9424 | P               |
+| null     | totmass ~ 1                                                                          | 630.4028 | NA              |
+| model2   | log(totmass) ~ species + feedlevel + sla + chlorophyll + num_lvs + num_phylls        | 131.7899 | P               |
+| model3   | log(totmass) ~ species + feedlevel + sla + chlorophyll + num_lvs                     | 129.5498 | P               |
+| model4   | log(totmass) ~ species + sla + chlorophyll + num_lvs                                 | 130.8121 | NP              |
 
 
+```{r}
+# summary of model3
+summary(model3)
+```
 
+```{r}
+# table for model3
+table <- tidy(model3, conf.int = TRUE, exponentiate = TRUE) %>% 
+  # change the p-value numbers if they're really small
+  # change the estmaes, standard error, and t-tstatistics to round to ___ digits
+  # using mutate
+  # make it into a flextable
+  flextable() %>% 
+  # fit it to the viewer
+  autofit()
+
+table
+```
+
+## 8b
+Model3 essentially states that the variables species, feedlevel, sla, chlorophyll, and num_lvs are the best predictors of log(totmass). 
+
+
+## 8c
+```{r}
+model_pred <- ggpredict(model3, terms = "species", back.transform = TRUE)
+
+plot(ggpredict(model3, terms = "species", back.transform = TRUE), add.data = TRUE)
+```
 
 
 
