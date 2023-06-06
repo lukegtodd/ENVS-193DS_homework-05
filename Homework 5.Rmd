@@ -80,11 +80,120 @@ full <- lm(totmass ~ species + feedlevel +
            data = sar_nona)
 ```
 
-## 7g
+## 7g/h
+```{r, fig.height = 6}
+# visual diagnostics for full model
+par(mfrow = c(2, 2))
+plot(full)
+```
+```{r}
+# statistical diagnostic checks
+check_normality(full)
+check_heteroscedasticity(full)
+```
 
 
+Checking normality and homoscedasticity assumptions both gave p-values less than 0.001, indicating that our current full model is non-normal and heteroscedastic. Because of this, we will log-transform our model and retest the diagnostics.
+
+```{r}
+# creating log transformed models
+null_log <- lm(log(totmass) ~ 1, data = sar_nona)
+full_log <- lm(log(totmass) ~ species + feedlevel + 
+                 sla + chlorophyll + amass + num_lvs + 
+                 num_phylls, 
+               data = sar_nona)
+```
 
 
+```{r, fig.height = 6}
+# visual diagnostic checks
+par(mfrow = c(2, 2))
+plot(full_log)
+```
+
+```{r}
+# statistical diagnostic checks
+check_normality(full_log)
+check_heteroscedasticity(full_log)
+```
+
+The statistical diagnostic checks for normality and homoscedasticity passed, so we will continue using the log-transformed model.
+
+
+# 7i
+```{r, fig.height = 6}
+# using ANOVA tables to create new models, eliminating one non-significant variable at a time
+anova(full_log)
+
+# based on this ANOVA, I will create a model without "amass" since it had the highest p-value
+model2 <- lm(log(totmass) ~ species + feedlevel + sla + chlorophyll + num_lvs + num_phylls,
+             data = sar_nona)
+
+# checking model2 visual diagnostics
+par(mfrow = c(2, 2))
+plot(model2)
+
+# checking model statistical diagnostics
+check_normality(model2)
+check_heteroscedasticity(model2)
+```
+Based on the visual and statistical diagnostic test, model2 passes all tests. Next, I will eliminate another variable and see if it still passes these tests.
+
+```{r, fig.height = 6}
+anova(model2)
+
+# based on the above ANOVA, I will create a model without "num_phylls" since it had the highest p-value
+model3 <- lm(log(totmass) ~ species + feedlevel + sla + chlorophyll + num_lvs,
+             data = sar_nona)
+
+# checking model2 visual diagnostics
+par(mfrow = c(2, 2))
+plot(model3)
+
+# checking model statistical diagnostics
+check_normality(model3)
+check_heteroscedasticity(model3)
+```
+Based on the visual and statistical diagnostic test, model3 passes all tests. Next, I will eliminate another variable and see if it still passes these tests.
+
+```{r, fig.height = 6}
+anova(model3)
+
+# based on the above ANOVA, I will create a model without "feedlevel" since it had the highest p-value
+model4 <- lm(log(totmass) ~ species + sla + chlorophyll + num_lvs,
+             data = sar_nona)
+
+# checking model2 visual diagnostics
+par(mfrow = c(2, 2))
+plot(model4)
+
+# checking model statistical diagnostics
+check_normality(model4)
+check_heteroscedasticity(model4)
+```
+
+The statistical tests show that model4 appears to have heteroscedasticity, or non-constant error variance, with a p-value of 0.036.  
+
+The type of model selection that I used above is called backward model selection. It begins at a full model and you slowly eliminate the least significant variable, until you are left with a model that passes all diagnostics, but has the least amount of predictor variables. Most of the time, it is better to have the least amount of predictor variables as possible since it increases the interpretability of your model. Based on the above method, "model3" appears to be our best model.
+
+
+## 7j
+
+```{r}
+# full model variance inflation factor check
+car::vif(full_log)
+```
+Based on the results, we can see that every variable has a GVIF value greater than 1, indicating that there is some multicollinearity. Ideally, you want to be as close as possible to 1.
+
+## 7k
+```{r}
+# comparing models using AIC
+MuMIn::AICc(full_log, null, model2, model3, model4)
+```
+
+The above chart shows that model3 has the lowest AICc value. Therefore, we will choose model3 as the best model.
+
+## 8a
 
 
 
